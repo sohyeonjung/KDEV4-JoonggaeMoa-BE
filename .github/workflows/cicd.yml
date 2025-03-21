@@ -61,7 +61,7 @@ jobs:
 
       # create application-prod.yml
       - name: make application-prod.yml
-        if: contatins(github.red, 'main')
+        if: contains(github.red, 'main')
         run: |
           cd ./src/main/resources
           touch ./application-main.yml
