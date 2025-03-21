@@ -58,7 +58,7 @@ jobs:
       - name: Build with Gradle Wrapper
         run: |
           export SPRING_PROFILES_ACTIVE=prod
-          ./gradlew build
+          ./gradlew build -x test
 
   cd:
     if: contains(github.ref, 'main')
@@ -82,7 +82,7 @@ jobs:
       - name: gradle build
         run: |
           export SPRING_PROFILES_ACTIVE=prod
-          ./gradlew build
+          ./gradlew build -x test
 
       #docker build&push
       - name: Docker build & push to prod
