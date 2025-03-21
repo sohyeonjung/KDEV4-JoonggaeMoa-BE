@@ -20,8 +20,18 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      
 
     steps:
+      # create application-prod.yml
+      - name: make application-prod.yml
+        if: contains(github.red, 'main')
+        run: |
+          cd ./src/main/resources
+          touch ./application-main.yml
+          echo "${{ secrets.PROPERTIES_PROD}}" > ./application-main.tml
+        shell: bash
+
       #JDK setting
       - uses: actions/checkout@v4
       - name: Set up JDK 17
