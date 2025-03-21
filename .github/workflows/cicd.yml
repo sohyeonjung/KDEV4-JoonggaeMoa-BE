@@ -97,7 +97,7 @@ jobs:
         uses: appleboy/ssh-action@master #원격 접속시 사용할 action
         if: contains(github.ref, 'main')
         with:
-          host: ${{ secrets.HOST_PROD}}  #EC2 public ip DNS
+          host: ${{ secrets.HOST_PROD }}  #EC2 public ip DNS
           username: ubuntu
           key: ${{ secrets.PRIVATE_KEY }} #pem key
           script: |
