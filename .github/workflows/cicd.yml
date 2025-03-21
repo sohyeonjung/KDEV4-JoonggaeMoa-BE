@@ -25,10 +25,10 @@ jobs:
     steps:
       # create application-prod.yml
       - name: make application-prod.yml
-        if: contains(github.red, 'main')
+        if: contains(github.ref, 'main')
         run: |
           cd ./src/main/resources
-          touch ./application-main.yml
+          touch ./application-prod.yml
           echo "${{secrets.PROPERTIES_PROD}}" > ./application-main.tml
         shell: bash
 
@@ -71,10 +71,10 @@ jobs:
 
       # create application-prod.yml
       - name: make application-prod.yml
-        if: contains(github.red, 'main')
+        if: contains(github.ref, 'main')
         run: |
           cd ./src/main/resources
-          touch ./application-main.yml
+          touch ./application-prod.yml
           echo "${{ secrets.PROPERTIES_PROD}}" > ./application-main.tml
         shell: bash
 
