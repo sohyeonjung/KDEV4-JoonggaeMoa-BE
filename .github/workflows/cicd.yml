@@ -29,7 +29,7 @@ jobs:
         run: |
           cd ./src/main/resources
           touch ./application-main.yml
-          echo "${{ secrets.PROPERTIES_PROD}}" > ./application-main.tml
+          echo "${{secrets.PROPERTIES_PROD}}" > ./application-main.tml
         shell: bash
 
       #JDK setting
@@ -40,7 +40,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      #gradle caching
+      #gradle cachin
       - name: Gradle Caching
         uses: actions/cache@v3
         with:
