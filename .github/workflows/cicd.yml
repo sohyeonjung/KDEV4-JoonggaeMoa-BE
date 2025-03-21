@@ -1,0 +1,116 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+# This workflow will build a Java project with Gradle and cache/restore any dependencies to improve the workflow execution time
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-java-with-gradle
+
+name: JoonggaeMoa CI/CD
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+jobs:
+  ci:
+    if: contains(github.ref, 'develop')
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      #JDK setting
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      #gradle caching
+      - name: Gradle Caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+            restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      #gradle build
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
+
+      - name: Build with Gradle Wrapper
+        run: |
+          export SPRING_PROFILES_ACTIVE=prod
+          ./gradlew build
+
+  cd:
+    if: contains(github.ref, 'main')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # create application-prod.yml
+      - name: make application-prod.yml
+        if: contatins(github.red, 'main')
+        run: |
+          cd ./src/main/resources
+          touch ./application-main.yml
+          echo "${{ secrets.PROPERTIES_PROD}}" > ./application-main.tml
+        shell: bash
+
+      # gradle build
+      - name: gradle build
+        run: |
+          export SPRING_PROFILES_ACTIVE=prod
+          ./gradlew build
+
+      #docker build&push
+      - name: Docker build & push to prod
+        if: contains(github.ref, 'main')
+        run: |
+          docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PASSWORD}}
+          docker build -f Dockerfile -t ${{secrets.DOCKER_USERNAME}}/docker-main .
+          docker push ${{secrets.DOCKER_USERNAME}}/docker-main
+
+      #deploy to ec2
+      - name: Deploy to prod
+        uses: appleboy/ssh-action@master #원격 접속시 사용할 action
+        if: contains(github.ref, 'main')
+        with:
+          host: ${{ secrets.HOST_PROD}}  #EC2 public ip DNS
+          username: ubuntu
+          key: ${{ secrets.PRIVATE_KEY }} #pem key
+          script: |
+            sudo docker ps
+            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/docker-main
+            sudo docker run -d -p 8080:8080 ${{ secrets.DOCKER_USERNAME }}/docker-main
+            sudo docker image prune -f
+
+
+
+  dependency-submission:
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Generate and submit dependency graph
+        uses: gradle/actions/dependency-submission@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
