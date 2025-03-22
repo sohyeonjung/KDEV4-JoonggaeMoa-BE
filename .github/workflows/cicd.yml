@@ -145,8 +145,8 @@ jobs:
               fi
             else
               # 컨테이너, 이미지 정리
-              sudo docker rename new-joonggaemoa joonggaemoa
               sudo docker rm $OLD_CONTAINER_ID
+              sudo docker rename new-joonggaemoa joonggaemoa
               sudo docker image prune -f
             fi
             
