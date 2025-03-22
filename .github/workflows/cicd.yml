@@ -102,8 +102,25 @@ jobs:
           key: ${{ secrets.PRIVATE_KEY }} #pem key
           script: |
             sudo docker ps
+            # Stop and remove existing container if it exists
+            sudo docker stop $(sudo docker ps -q --filter ancestor=${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa) 2>/dev/null || true
+            sudo docker rm $(sudo docker ps -aq --filter ancestor=${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa) 2>/dev/null || true
+            
+            # Pull and run new container
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
-            sudo docker run -d -p 8080:8080 ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
+            sudo docker run -d --name joonggaemoa -p 8080:8080 ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
+            
+            # Wait for container to start and check logs
+            sleep 10
+            sudo docker logs joonggaemoa
+            
+            # Verify container is running
+            if ! sudo docker ps | grep -q joonggaemoa; then
+              echo "Container failed to start"
+              exit 1
+            fi
+            
+            # Clean up old images
             sudo docker image prune -f
 
 
