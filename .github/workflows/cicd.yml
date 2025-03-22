@@ -101,6 +101,9 @@ jobs:
           key: ${{ secrets.PRIVATE_KEY }}
           script: |
 
+            # 초기 상태 설정
+            DEPLOY_STATUS="success"
+
             # 컨테이너, 이미지 확인
             echo "Docker Imformations:"
             sudo docker ps
@@ -128,6 +131,7 @@ jobs:
 
               # 새로운 컨테이너 실행 실패 시, 기존 컨테이너 재시작
               if [ -n "$OLD_CONTAINER_ID" ]; then
+                DEPLOY_STATUS="failed"
                 echo "Restarting old container: $OLD_CONTAINER_ID"
                 sudo docker start $OLD_CONTAINER_ID
                   
@@ -140,6 +144,7 @@ jobs:
                   exit 1
                 fi
               else
+                DEPLOY_STATUS="old_failed"
                 echo "No old container found. Rollback not possible."
                 exit 1
               fi
@@ -153,5 +158,16 @@ jobs:
             echo "After Deploy:"
             sudo docker ps
             sudo docker images
+
+            echo "Deploy Status: $DEPLOY_STATUS"
+            if [ "$DEPLOY_STATUS" == "failed" ]; then
+              echo "New deploy failed. Please check the logs."
+              exit 1
+            elif [ "$DEPLOY_STATUS" == "old_failed" ]; then
+              echo "Rollback failed. Please check the logs."
+              exit 1
+            fi
+            
+            
             
             
