@@ -11,19 +11,28 @@ on:
   push:
     branches: [ "main", "develop" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "develop" ]
 
 jobs:
   ci:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    if: contains(github.ref, 'develop')
+
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      
 
     steps:
-      - uses: actions/checkout@v4
-      
+      # create application-prod.yml
+      - name: make application-prod.yml
+        run: |
+          cd ./src/main/resources
+          touch ./application-prod.yml
+          echo "${{secrets.PROPERTIES_PROD}}" > ./application-prod.yml
+        shell: bash
+
       #JDK setting
+      - uses: actions/checkout@v4
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -37,23 +46,24 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
+            key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+            restore-keys: |
             ${{ runner.os }}-gradle-
 
       #gradle build
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582
+        uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
 
       - name: Build with Gradle Wrapper
         run: |
           export SPRING_PROFILES_ACTIVE=prod
-          ./gradlew build -x test
+          ./gradlew build -x test 
 
   cd:
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'pull_request' && github.base_ref == 'main')
+
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -64,8 +74,7 @@ jobs:
       # create application-prod.yml
       - name: make application-prod.yml
         run: |
-          mkdir -p src/main/resources
-          cd src/main/resources
+          cd ./src/main/resources
           touch ./application-prod.yml
           echo "${{ secrets.PROPERTIES_PROD}}" > ./application-prod.yml
         shell: bash
@@ -85,11 +94,11 @@ jobs:
 
       #deploy to ec2
       - name: Deploy to prod
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@master #원격 접속시 사용할 action
         with:
-          host: ${{ secrets.HOST_PROD }}
+          host: ${{ secrets.HOST_PROD }}  #EC2 public ip DNS
           username: ubuntu
-          key: ${{ secrets.PRIVATE_KEY }}
+          key: ${{ secrets.PRIVATE_KEY }} #pem key
           script: |
             sudo docker ps
             # Stop and remove existing container if it exists
@@ -98,9 +107,7 @@ jobs:
             
             # Pull and run new container
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
-            sudo docker run -d --name joonggaemoa -p 8080:8080 \
-              -e SPRING_PROFILES_ACTIVE=prod \
-              ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
+            sudo docker run -d --name joonggaemoa -p 8080:8080 ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
             
             # Wait for container to start and check logs
             sleep 10
