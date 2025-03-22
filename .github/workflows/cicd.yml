@@ -47,8 +47,8 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-            key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-            restore-keys: |
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
             ${{ runner.os }}-gradle-
 
       #gradle build
@@ -60,6 +60,7 @@ jobs:
           export SPRING_PROFILES_ACTIVE=prod
           ./gradlew build -x test 
 
+  # TODO: PR시 PR check, push(merge) check로 배포가 2번 됨
   cd:
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
@@ -105,12 +106,17 @@ jobs:
             sudo docker stop $(sudo docker ps -q --filter ancestor=${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa) 2>/dev/null || true
             sudo docker rm $(sudo docker ps -aq --filter ancestor=${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa) 2>/dev/null || true
             
-            # Pull and run new container
+            # # Pull and run new container
+            # sudo docker pull ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
+            # sudo docker run -d --name joonggaemoa -p 8080:8080 \
+            #   -e SPRING_PROFILES_ACTIVE=prod \
+            #   ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
+            # Fai test
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
             sudo docker run -d --name joonggaemoa -p 8080:8080 \
-              -e SPRING_PROFILES_ACTIVE=prod \
               ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
-            
+
+
             # Wait for container to start and check logs
             sleep 10
             sudo docker logs joonggaemoa
