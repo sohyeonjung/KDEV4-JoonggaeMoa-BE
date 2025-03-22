@@ -114,10 +114,11 @@ jobs:
             sudo docker stop $OLD_CONTAINER_ID 2>/dev/null || true
             #sudo docker rm $OLD_CONTAINER_ID 2>/dev/null || true
             
-            # 새로운 컨테이너 pull, run
+
+            # 새로운 컨테이너 pull, run  fail test
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
             sudo docker run -d --name new-joonggaemoa -p 8080:8080 \
-              -e SPRING_PROFILES_ACTIVE=prod \
+              #-e SPRING_PROFILES_ACTIVE=prod \
               ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
             
             # log 
