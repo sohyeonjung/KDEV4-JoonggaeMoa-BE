@@ -101,11 +101,13 @@ jobs:
           key: ${{ secrets.PRIVATE_KEY }}
           script: |
 
+            # 컨테이너, 이미지 확인
+            echo "Docker Imformations:"
             sudo docker ps
             sudo docker images
 
             # 기존 컨테이너 ID 조회, 중지
-            OLD_CONTAINER_ID=$(sudo docker ps -q --filter ancestor=${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa)
+            OLD_CONTAINER_ID=$(sudo docker ps -q --filter name=joonggaemoa)
             sudo docker stop $OLD_CONTAINER_ID 2>/dev/null || true
             #sudo docker rm $OLD_CONTAINER_ID 2>/dev/null || true
             
@@ -117,7 +119,7 @@ jobs:
             
             # log 
             sleep 10
-            sudo docker logs joonggaemoa
+            sudo docker logs new-joonggaemoa
             
             # 컨테이너 실행 확인
             if ! sudo docker ps | grep -q new-joonggaemoa; then
@@ -141,9 +143,11 @@ jobs:
                 echo "No old container found. Rollback not possible."
                 exit 1
               fi
+            else
+              # 컨테이너, 이미지 정리
+              sudo docker rename new-joonggaemoa joonggaemoa
+              sudo docker rm $OLD_CONTAINER_ID
+              sudo docker image prune -f
             fi
             
-            # 컨테이너, 이미지 정리
-            sudo docker rename new-joonggaemoa joonggaemoa
-            sudo docker rm $OLD_CONTAINER_ID
-            sudo docker image prune -f
+            
