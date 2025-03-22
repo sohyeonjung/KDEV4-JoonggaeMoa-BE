@@ -116,24 +116,33 @@ jobs:
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
 
             echo "Starting new container..."
-            sudo docker run -d --name joonggaemoa -p 8080:8080 \
+            sudo docker run -d --name joonggaemoa-new -p 8080:8080 \
               -e SPRING_PROFILES_ACTIVE=prod \
               ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
             
             # 로그 
             sleep 10
-            sudo docker logs joonggaemoa
+            sudo docker logs joonggaemoa-new
  
             # 헬스 체크 (배포 실패 시 새로운 컨테이너 삭제, 기존 컨테이너 다시 실행)
-            if curl -s --head http://localhost:8080 | grep "200 OK" > /dev/null; then
-              echo "New container is running"
-              sudo docker rm "$OLD_CONTAINER_ID"
+            # if curl -s --head http://localhost:8080 | grep "200 OK" > /dev/null; then
+            #   echo "New container is running"
+            if sudo docker ps | grep -q joonggaemoa-new && \
+              sudo docker logs joonggaemoa-new 2>&1 | grep -q "Started JoonggaeMoaApplication"; then
+              echo "New container started successfully"
+
+              if [ -n "$OLD_CONTAINER_ID" ]; then
+                echo "Removing old container..."
+                sudo docker rm "$OLD_CONTAINER_ID"
+              fi
+
+              sudo docker rename joonggaemoa-new joonggaemoa
               sudo docker image prune -f 
             else
               echo "New container failed to start, Rolling back..."
               
-              sudo docker stop joonggaemoa
-              sudo docker rm joonggaemoa
+              sudo docker stop joonggaemoa-new
+              sudo docker rm joonggaemoa-new
 
               if [ -n "$OLD_CONTAINER_ID" ]; then
                 echo "Starting old container..."
