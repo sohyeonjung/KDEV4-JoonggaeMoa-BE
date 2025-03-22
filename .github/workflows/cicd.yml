@@ -29,7 +29,7 @@ jobs:
         run: |
           cd ./src/main/resources
           touch ./application-prod.yml
-          echo "${{secrets.PROPERTIES_PROD}}" > ./application-main.tml
+          echo "${{secrets.PROPERTIES_PROD}}" > ./application-prod.yml
         shell: bash
 
       #JDK setting
@@ -40,7 +40,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      #gradle cachin
+      #gradle caching
       - name: Gradle Caching
         uses: actions/cache@v3
         with:
@@ -58,7 +58,7 @@ jobs:
       - name: Build with Gradle Wrapper
         run: |
           export SPRING_PROFILES_ACTIVE=prod
-          ./gradlew build -x test
+          ./gradlew build -x test 
 
   cd:
     if: contains(github.ref, 'main')
@@ -75,7 +75,7 @@ jobs:
         run: |
           cd ./src/main/resources
           touch ./application-prod.yml
-          echo "${{ secrets.PROPERTIES_PROD}}" > ./application-main.yml
+          echo "${{ secrets.PROPERTIES_PROD}}" > ./application-prod.yml
         shell: bash
 
       # gradle build
@@ -89,8 +89,8 @@ jobs:
         if: contains(github.ref, 'main')
         run: |
           docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PASSWORD}}
-          docker build -f Dockerfile -t ${{secrets.DOCKER_USERNAME}}/docker-main .
-          docker push ${{secrets.DOCKER_USERNAME}}/docker-main
+          docker build -f Dockerfile -t ${{secrets.DOCKER_USERNAME}}/docker-joonggaemoa .
+          docker push ${{secrets.DOCKER_USERNAME}}/docker-joonggaemoa
 
       #deploy to ec2
       - name: Deploy to prod
@@ -102,8 +102,8 @@ jobs:
           key: ${{ secrets.PRIVATE_KEY }} #pem key
           script: |
             sudo docker ps
-            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/docker-main
-            sudo docker run -d -p 8080:8080 ${{ secrets.DOCKER_USERNAME }}/docker-main
+            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
+            sudo docker run -d -p 8080:8080 ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
             sudo docker image prune -f
 
 
