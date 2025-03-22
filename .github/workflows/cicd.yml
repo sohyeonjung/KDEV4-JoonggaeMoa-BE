@@ -100,10 +100,16 @@ jobs:
           username: ubuntu
           key: ${{ secrets.PRIVATE_KEY }}
           script: |
+
             sudo docker ps
+            sudo docker images
+
+            # 기존 컨테이너 ID 조회
+            OLD_CONTAINER_ID=$(sudo docker ps -q --filter ancestor=${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa)
+
             # Stop and remove existing container if it exists
-            sudo docker stop $(sudo docker ps -q --filter ancestor=${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa) 2>/dev/null || true
-            sudo docker rm $(sudo docker ps -aq --filter ancestor=${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa) 2>/dev/null || true
+            sudo docker stop $OLD_CONTAINER_ID 2>/dev/null || true
+            #sudo docker rm $OLD_CONTAINER_ID 2>/dev/null || true
             
             # Pull and run new container
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
@@ -117,9 +123,26 @@ jobs:
             
             # Verify container is running
             if ! sudo docker ps | grep -q joonggaemoa; then
-              echo "Container failed to start"
-              exit 1
+              echo "New Container failed to start"
+              # 기존 컨테이너 재시작
+              if [ -n "$OLD_CONTAINER_ID" ]; then
+                echo "Restarting old container: $OLD_CONTAINER_ID"
+                sudo docker start $OLD_CONTAINER_ID
+                  
+                # 기존 컨테이너 재시작 확인
+                sleep 10
+                if sudo docker ps | grep -q "$OLD_CONTAINER_ID"; then
+                  echo "Rollback successful. Old container is running."
+                else
+                  echo "Rollback failed. Old container did not start properly."
+                  exit 1
+                fi
+              else
+                echo "No old container found. Rollback not possible."
+                exit 1
+              fi
             fi
             
             # Clean up old images
+            sudo docker rm $OLD_CONTAINER_ID
             sudo docker image prune -f
