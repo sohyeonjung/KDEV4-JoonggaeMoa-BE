@@ -93,7 +93,7 @@ jobs:
           docker push ${{secrets.DOCKER_USERNAME}}/docker-joonggaemoa
 
       #deploy to ec2
-      - name: Deploy to prod
+      - name: Deploy to ec2
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST_PROD }}
@@ -101,26 +101,50 @@ jobs:
           key: ${{ secrets.PRIVATE_KEY }}
           script: |
             sudo docker ps
-            # Stop and remove existing container if it exists
-            sudo docker stop $(sudo docker ps -q --filter ancestor=${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa) 2>/dev/null || true
-            sudo docker rm $(sudo docker ps -aq --filter ancestor=${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa) 2>/dev/null || true
+            sudo docker images
+
+            # 기존 실행되던 컨테이너 정보 저장
+            OLD_CONTAINER_ID=$(sudo docker ps -q --filter ancestor=${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa)
+
+            # 기존 컨테이너 종료, 삭제
+            if [ -n "$OLD_CONTAINER_ID" ]; then
+              echo "Stopping old container: $OLD_CONTAINER_ID"
+              sudo docker stop "$OLD_CONTAINER_ID"
+              sudo docker rm "$OLD_CONTAINER_ID"
+            fi
             
-            # Pull and run new container
+            # 새로운 이미지 pull, 컨테이너 실행
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
+
+            echo "Starting new container..."
             sudo docker run -d --name joonggaemoa -p 8080:8080 \
               -e SPRING_PROFILES_ACTIVE=prod \
               ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
             
-            # Wait for container to start and check logs
+            # 로그 
             sleep 10
             sudo docker logs joonggaemoa
-            
-            # Verify container is running
-            if ! sudo docker ps | grep -q joonggaemoa; then
-              echo "Container failed to start"
+ 
+            # 헬스 체크 (배포 실패 시 새로운 컨테이너 삭제, 기존 컨테이너 다시 실행)
+            if curl -s --head http://localhost:8080 | grep "200 OK" > /dev/null; then
+              echo "New container is running"
+              sudo docker image prune -f 
+            else
+              echo "New container failed to start, Rolling back..."
+              
+              sudo docker stop joonggaemoa
+              sudo docker rm joonggaemoa
+
+              if [ -n "$OLD_CONTAINER_ID" ]; then
+                echo "Starting old container..."
+                sudo docker start $OLD_CONTAINER_ID
+              else
+                echo "No old container found, exiting..."
+              fi
+              
               exit 1
             fi
+
+      
             
-            # Clean up old images
-            sudo docker image prune -f
 
