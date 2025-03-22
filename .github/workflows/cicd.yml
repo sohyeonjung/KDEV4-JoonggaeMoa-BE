@@ -149,5 +149,9 @@ jobs:
               sudo docker rename new-joonggaemoa joonggaemoa
               sudo docker image prune -f
             fi
+
+            echo "After Deploy:"
+            sudo docker ps
+            sudo docker images
             
             
