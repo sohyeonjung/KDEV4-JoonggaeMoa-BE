@@ -110,7 +110,6 @@ jobs:
             if [ -n "$OLD_CONTAINER_ID" ]; then
               echo "Stopping old container: $OLD_CONTAINER_ID"
               sudo docker stop "$OLD_CONTAINER_ID"
-              sudo docker rm "$OLD_CONTAINER_ID"
             fi
             
             # 새로운 이미지 pull, 컨테이너 실행
@@ -128,6 +127,7 @@ jobs:
             # 헬스 체크 (배포 실패 시 새로운 컨테이너 삭제, 기존 컨테이너 다시 실행)
             if curl -s --head http://localhost:8080 | grep "200 OK" > /dev/null; then
               echo "New container is running"
+              sudo docker rm "$OLD_CONTAINER_ID"
               sudo docker image prune -f 
             else
               echo "New container failed to start, Rolling back..."
