@@ -104,27 +104,27 @@ jobs:
             sudo docker ps
             sudo docker images
 
-            # 기존 컨테이너 ID 조회
+            # 기존 컨테이너 ID 조회, 중지
             OLD_CONTAINER_ID=$(sudo docker ps -q --filter ancestor=${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa)
-
-            # Stop and remove existing container if it exists
             sudo docker stop $OLD_CONTAINER_ID 2>/dev/null || true
             #sudo docker rm $OLD_CONTAINER_ID 2>/dev/null || true
             
-            # Pull and run new container
+            # 새로운 컨테이너 pull, run
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
-            sudo docker run -d --name joonggaemoa -p 8080:8080 \
+            sudo docker run -d --name new-joonggaemoa -p 8080:8080 \
               -e SPRING_PROFILES_ACTIVE=prod \
               ${{ secrets.DOCKER_USERNAME }}/docker-joonggaemoa
             
-            # Wait for container to start and check logs
+            # log 
             sleep 10
             sudo docker logs joonggaemoa
             
-            # Verify container is running
-            if ! sudo docker ps | grep -q joonggaemoa; then
+            # 컨테이너 실행 확인
+            if ! sudo docker ps | grep -q new-joonggaemoa; then
               echo "New Container failed to start"
-              # 기존 컨테이너 재시작
+              sudo docker rm new-joonggaemoa 2>/dev/null || true
+
+              # 새로운 컨테이너 실행 실패 시, 기존 컨테이너 재시작
               if [ -n "$OLD_CONTAINER_ID" ]; then
                 echo "Restarting old container: $OLD_CONTAINER_ID"
                 sudo docker start $OLD_CONTAINER_ID
@@ -143,6 +143,7 @@ jobs:
               fi
             fi
             
-            # Clean up old images
+            # 컨테이너, 이미지 정리
+            sudo docker rename new-joonggaemoa joonggaemoa
             sudo docker rm $OLD_CONTAINER_ID
             sudo docker image prune -f
